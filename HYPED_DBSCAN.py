@@ -36,7 +36,7 @@ class DBSCAN:
                 self._logic_handler()
 
     """
-    Handles main logic of DBSCAN class
+    Handles main logic of DBSCAN class, as described in documentation
     """
     def _logic_handler(self):
         # Step 1
@@ -81,6 +81,9 @@ class DBSCAN:
         self.current_idx += 1
         return self.DATA[self.VISIT_ORDER[self.current_idx]]
 
+    """
+    Find all neighbours within epsilon of given data point
+    """
     def _init_neighbours(self, data_point):
         neighbours = []
 
@@ -133,11 +136,11 @@ class DataPoint:
     def __init__(self, val, xval):
         self.val = val
         self.xval = xval
-        self.neighbours = []
+        self.neighbours = set()
         self.type = 0
 
     def add_neighbour(self, neighbour):
-        self.neighbours.append(neighbour)
+        self.neighbours.add(neighbour)
 
 
 def data_reader(epsilon, restrict_size=20):
@@ -159,7 +162,7 @@ def data_reader(epsilon, restrict_size=20):
 
 
 def run():
-    data_size = 30
+    data_size = 35
     epsilon = 0.18/2  # Half of the average variance?
     min_points = 2
 

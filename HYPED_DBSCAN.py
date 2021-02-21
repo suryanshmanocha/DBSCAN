@@ -13,8 +13,7 @@ Note: More optimal, python-specific design choices could be made.
 class DBSCAN:
 
     DATA_TYPES = ("Unknown", "Noise", "Border", "Core")
-    DATA = []
-    DATA_X = []
+    DATA = []  # List of DataPoint objects, in time series order
     VISIT_ORDER = []  # List of indexes of len(DATA), randomly shuffled
     current_idx = -1  # Current index for VISIT_ORDER
 
@@ -22,9 +21,10 @@ class DBSCAN:
     BORDER = set()
     NOISE = set()
 
-    def __init__(self, epsilon, min_points, data):
+    def __init__(self, epsilon, min_points, data, num_imus=4):
         self.epsilon = epsilon
         self.min_points = min_points
+        self.num_imus = num_imus
 
         self._parse_data(data)
         self._run()
@@ -34,6 +34,7 @@ class DBSCAN:
             self._init_rand()
             while self.current_idx != len(self.DATA)-1:
                 self._logic_handler()
+            self._verify_trend()
 
     """
     Handles main logic of DBSCAN class, as described in documentation
@@ -96,6 +97,75 @@ class DBSCAN:
 
         return neighbours
 
+    """
+    Final method to be called after all data is clustered.
+    Verifies the outliers are correctly chosen for each time interval, and acts accordingly.
+    This is discussed in more detail in the paper, under 'Implementation Complications and Design Choices'
+    """
+    def _verify_trend(self):
+        r_data = ([k.xval for k in self.DATA if k.type != 1], [k.val for k in self.DATA if k.type != 1])
+        # outliers = [k for k in self.DATA if k.type == 1]
+        #  Calculate correlation coefficient of non-outliers
+        r = self._correlation_coefficient(r_data[0], r_data[1])
+
+        #  Iterate through all time intervals. Assumes always 4 IMUs
+        i = 0
+        while i < len(self.DATA):
+            data = [self.DATA[k] for k in range(i, i + self.num_imus)]
+            #  Check if there is a 50-50 split on outlier decision
+            for j in range(self.num_imus):
+                if self.DATA[i+j].type == 1:
+                    #  If point is outlier, and has neighbours => 50-50 split or worse
+                    #  Assumes the point itself is not considered its own neighbour
+                    if len(self.DATA[i+j].neighbours) > 0:
+                        #  Then, use point closest (and neighbours) to predicted point (using correlation coeff)
+                        prediction = r * self.DATA[i+j].xval + self.DATA[i].val
+                        #  Find value closest to predicted point
+                        min_diff = 10
+                        min_diff_datum = 0
+                        for k in data:
+                            diff = abs(k.val - prediction)
+                            if diff < min_diff:
+                                min_diff = diff
+                                min_diff_datum = k
+                        # Get neighbours of diff_idx
+                        if min_diff_datum.type == 1:
+                            for adjacent in data:
+                                if adjacent in min_diff_datum.neighbours:
+                                    adjacent.type = 3
+                                    self.CORE.add(adjacent)
+                                    if adjacent in self.NOISE:
+                                        self.NOISE.remove(adjacent)
+                                else:
+                                    adjacent.type = 1
+                                    self.NOISE.add(adjacent)
+                            min_diff_datum.type = 3
+                            self.CORE.add(min_diff_datum)
+                            self.NOISE.remove(min_diff_datum)
+            i += self.num_imus
+
+    @staticmethod
+    def _correlation_coefficient(x_vals, y_vals):
+        x_mean = sum(x_vals) / len(x_vals)
+        y_mean = sum(y_vals) / len(y_vals)
+
+        covar_vector = []
+        for i in range(len(x_vals)):
+            covar_vector.append((x_vals[i] - x_mean) * (y_vals[i] - y_mean))
+        covar = sum(covar_vector)
+
+        x_var_vector = []
+        for i in range(len(x_vals)):
+            x_var_vector.append((x_vals[i] - x_mean)**2)
+        x_var = math.sqrt(sum(x_var_vector))
+
+        y_var_vector = []
+        for i in range(len(y_vals)):
+            y_var_vector.append((y_vals[i] - y_mean) ** 2)
+        y_var = math.sqrt(sum(y_var_vector))
+
+        return covar / (x_var * y_var)
+
     @staticmethod
     def _euclidean_dist(p, q):
         dist = math.sqrt(
@@ -113,8 +183,6 @@ class DBSCAN:
         for i in range(len(data[0])):
             for j in range(len(data[0][i])):
                 self.DATA.append(DataPoint(data[0][i][j], data[1][i][j]))
-
-        self.DATA_X = data[1]
 
     def _init_rand(self):
         self.VISIT_ORDER = [i for i in range(len(self.DATA))]
@@ -162,7 +230,7 @@ def data_reader(epsilon, restrict_size=20):
 
 
 def run():
-    data_size = 35
+    data_size = 10
     epsilon = 0.18/2  # Half of the average variance?
     min_points = 2
 

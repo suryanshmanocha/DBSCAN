@@ -97,6 +97,38 @@ class DBSCAN:
 
         return neighbours
 
+    def _require_replacement(self, i, j):
+        #  If point is outlier, and has neighbours => 50-50 split or worse
+        #  Assumes the point itself is not considered its own neighbour
+        return (self.DATA[i+j].type == 1) and (len(self.DATA[i+j].neighbours) > 0)
+
+    def _best_approximate(self, r, i, j, data):
+        prediction = r * self.DATA[i + j].xval + self.DATA[i].val
+        #  Find value closest to predicted point
+        min_diff = 10
+        min_diff_datum = 0
+        for k in data:
+            diff = abs(k.val - prediction)
+            if diff < min_diff:
+                min_diff = diff
+                min_diff_datum = k
+
+        return min_diff_datum
+
+    def _adjust_classifier(self, data, closest_datum):
+        for adjacent in data:
+            if adjacent in closest_datum.neighbours:
+                adjacent.type = 3
+                self.CORE.add(adjacent)
+                if adjacent in self.NOISE:
+                    self.NOISE.remove(adjacent)
+            else:
+                adjacent.type = 1
+                self.NOISE.add(adjacent)
+        closest_datum.type = 3
+        self.CORE.add(closest_datum)
+        self.NOISE.remove(closest_datum)
+
     """
     Final method to be called after all data is clustered.
     Verifies the outliers are correctly chosen for each time interval, and acts accordingly.
@@ -114,34 +146,12 @@ class DBSCAN:
             data = [self.DATA[k] for k in range(i, i + self.num_imus)]
             #  Check if there is a 50-50 split on outlier decision
             for j in range(self.num_imus):
-                if self.DATA[i+j].type == 1:
-                    #  If point is outlier, and has neighbours => 50-50 split or worse
-                    #  Assumes the point itself is not considered its own neighbour
-                    if len(self.DATA[i+j].neighbours) > 0:
-                        #  Then, use point closest (and neighbours) to predicted point (using correlation coeff)
-                        prediction = r * self.DATA[i+j].xval + self.DATA[i].val
-                        #  Find value closest to predicted point
-                        min_diff = 10
-                        min_diff_datum = 0
-                        for k in data:
-                            diff = abs(k.val - prediction)
-                            if diff < min_diff:
-                                min_diff = diff
-                                min_diff_datum = k
-                        # Get neighbours of diff_idx
-                        if min_diff_datum.type == 1:
-                            for adjacent in data:
-                                if adjacent in min_diff_datum.neighbours:
-                                    adjacent.type = 3
-                                    self.CORE.add(adjacent)
-                                    if adjacent in self.NOISE:
-                                        self.NOISE.remove(adjacent)
-                                else:
-                                    adjacent.type = 1
-                                    self.NOISE.add(adjacent)
-                            min_diff_datum.type = 3
-                            self.CORE.add(min_diff_datum)
-                            self.NOISE.remove(min_diff_datum)
+                if self._require_replacement(i, j):
+                    #  Then, find point closest (and neighbours) to predicted point (using correlation coeff)
+                    closest_datum = self._best_approximate(r, i, j, data)
+                    # If best approximate is classed as noise, swap noise and core types within interval
+                    if closest_datum.type == 1:
+                        self._adjust_classifier(data, closest_datum)
             i += self.num_imus
 
     @staticmethod
@@ -212,8 +222,8 @@ class DataPoint:
 
 
 def data_reader(epsilon, restrict_size=20):
-    with open("squashed_data.txt") as file:
-        raw_data_arr = [line.split(' ') for line in file.readlines()]
+    with open("noisy_data.txt") as file:
+        raw_data_arr = [line.split(' ') for line in file.readlines()][:restrict_size]
         data_arr = []
 
         for arr in raw_data_arr:
@@ -230,8 +240,8 @@ def data_reader(epsilon, restrict_size=20):
 
 
 def run():
-    data_size = 10
-    epsilon = 0.18/2  # Half of the average variance?
+    data_size = 60
+    epsilon = 0.17/2  # Half of the average variance?
     min_points = 2
 
     dbscan = DBSCAN(epsilon, min_points, data_reader(epsilon, data_size))

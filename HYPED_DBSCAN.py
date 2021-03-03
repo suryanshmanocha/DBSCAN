@@ -222,7 +222,7 @@ class DataPoint:
 
 
 def data_reader(epsilon, restrict_size=20):
-    with open("noisy_data.txt") as file:
+    with open("scattered_data.txt") as file:
         raw_data_arr = [line.split(' ') for line in file.readlines()][:restrict_size]
         data_arr = []
 
@@ -231,7 +231,7 @@ def data_reader(epsilon, restrict_size=20):
             for i in range(1, 5):
                 data = arr[i]
                 data.strip('\n')
-                prcsd_data.append(float(data))
+                prcsd_data.append(float(data)) #+ float(data) * random.uniform(-0.02, 0.02))
             data_arr.append(prcsd_data)
 
     data_arr_x = [[i * epsilon*0.9] * 4 for i in range(len(data_arr))]
@@ -240,8 +240,8 @@ def data_reader(epsilon, restrict_size=20):
 
 
 def run():
-    data_size = 60
-    epsilon = 0.17/2  # Half of the average variance?
+    data_size = 100
+    epsilon = 0.15/2  # Half of the average variance?
     min_points = 2
 
     dbscan = DBSCAN(epsilon, min_points, data_reader(epsilon, data_size))

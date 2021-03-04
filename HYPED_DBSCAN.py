@@ -29,6 +29,20 @@ class DBSCAN:
         self._parse_data(data)
         self._run()
 
+    """
+    Parse raw data input: Assuming data input is array of arrays
+    """
+    def _parse_data(self, data):
+        print(data)
+        for i in range(len(data[0])):
+            for j in range(len(data[0][i])):
+                self.DATA.append(DataPoint(data[0][i][j], data[1][i][j]))
+
+    def _init_rand(self):
+        self.VISIT_ORDER = [i for i in range(len(self.DATA))]
+        random.shuffle(self.VISIT_ORDER)
+        self.current_idx = -1
+
     def _run(self):
         for _ in range(len(self.DATA)):
             self._init_rand()
@@ -186,19 +200,6 @@ class DBSCAN:
         )
         return dist
 
-    """
-    Parse raw data input: Assuming data input is array of arrays
-    """
-    def _parse_data(self, data):
-        for i in range(len(data[0])):
-            for j in range(len(data[0][i])):
-                self.DATA.append(DataPoint(data[0][i][j], data[1][i][j]))
-
-    def _init_rand(self):
-        self.VISIT_ORDER = [i for i in range(len(self.DATA))]
-        random.shuffle(self.VISIT_ORDER)
-        self.current_idx = -1
-
     def get_outliers(self):
         return self.NOISE
 
@@ -240,7 +241,7 @@ def data_reader(epsilon, restrict_size=20):
 
 
 def run():
-    data_size = 100
+    data_size = 30
     epsilon = 0.15/2  # Half of the average variance?
     min_points = 2
 

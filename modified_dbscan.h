@@ -6,17 +6,16 @@ using namespace std;
 namespace db {
     class DataPoint {
     public:
-        DataPoint(float val, float xval, set<DataPoint> neighbours, int type);
+        DataPoint(float val, float xval);
 
         float val;
         float xval;
         set<DataPoint> neighbours;
-        int type;
+        int type = 0;
     };
 
     typedef DataPoint datum;
     typedef vector<datum> data_arr;
-    typedef vector<data_arr> data_arrs;
 
     class DBSCAN {
     public:
@@ -26,12 +25,11 @@ namespace db {
 
     private:
         string const DATA_TYPES[4] = {"Unknown", "Noise", "Border", "Core"};
-        data_arrs DATA;
-        vector <int> visit_order;
+        data_arr DATA;
+        vector<int> visit_order;
         int curr_idx = 0;
         float epsilon;
         int min_points;
-        data_arrs data;
         int num_imus;
         set<DataPoint> CORE;
         set<DataPoint> BORDER;
@@ -41,14 +39,15 @@ namespace db {
         void parse_data(vector<vector<float>> data);
         void init_rand();
         void logic_handler();
-        bool has_min_vertical_neighbours();
+        bool static has_min_vertical_neighbours(const datum& data_point, const data_arr& neighbours);
         datum visit_random();
-        data_arr init_neighbours();
-        bool require_replacement();
-        datum best_approximate();
-        void adjust_classifier();
-        float correlation_coefficient(vector<float> x_vals, vector<float> y_vals);
-        float euclidean_dist(datum p, datum q);
+        data_arr init_neighbours(datum data_point);
+        bool require_replacement(int i, int j);
+        datum best_approximate(float r, int i, int j, data_arr data);
+        void adjust_classifier(data_arr data, datum closest_datum);
+        void verify_trend();
+        float static correlation_coefficient(vector<float> x_vals, vector<float> y_vals);
+        double static euclidean_dist(datum p, datum q);
 
     };
 }

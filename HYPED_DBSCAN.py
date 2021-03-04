@@ -33,7 +33,6 @@ class DBSCAN:
     Parse raw data input: Assuming data input is array of arrays
     """
     def _parse_data(self, data):
-        print(data)
         for i in range(len(data[0])):
             for j in range(len(data[0][i])):
                 self.DATA.append(DataPoint(data[0][i][j], data[1][i][j]))
@@ -120,7 +119,7 @@ class DBSCAN:
         prediction = r * self.DATA[i + j].xval + self.DATA[i].val
         #  Find value closest to predicted point
         min_diff = 10
-        min_diff_datum = 0
+        min_diff_datum = None
         for k in data:
             diff = abs(k.val - prediction)
             if diff < min_diff:
@@ -154,9 +153,8 @@ class DBSCAN:
         #  Calculate correlation coefficient of non-outliers
         r = self._correlation_coefficient(r_data[0], r_data[1])
 
-        #  Iterate through all time intervals. Assumes always 4 IMUs
-        i = 0
-        while i < len(self.DATA):
+        #  Iterate through all time intervals.
+        for i in range(0, len(self.DATA), self.num_imus):
             data = [self.DATA[k] for k in range(i, i + self.num_imus)]
             #  Check if there is a 50-50 split on outlier decision
             for j in range(self.num_imus):
@@ -166,7 +164,6 @@ class DBSCAN:
                     # If best approximate is classed as noise, swap noise and core types within interval
                     if closest_datum.type == 1:
                         self._adjust_classifier(data, closest_datum)
-            i += self.num_imus
 
     @staticmethod
     def _correlation_coefficient(x_vals, y_vals):
@@ -192,13 +189,12 @@ class DBSCAN:
 
     @staticmethod
     def _euclidean_dist(p, q):
-        dist = math.sqrt(
+        return math.sqrt(
             sum((
                 (p.val - q.val)**2,
                 (p.xval - q.xval)**2,
             ))
         )
-        return dist
 
     def get_outliers(self):
         return self.NOISE

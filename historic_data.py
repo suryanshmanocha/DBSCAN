@@ -88,20 +88,15 @@ def main():
     buffer = LinkedList(4)
     #print(buffer)
 
-    new_data_arr = [12, 14, 11, 13]
-    buffer.add(new_data_arr)
+    buffer.add([12, 14, 11, 13])
 
-    new_data_arr = [15, 17, 11, 14]
-    buffer.add(new_data_arr)
+    buffer.add([15, 17, 11, 14])
 
-    new_data_arr = [16, 18, 13, 15]
-    buffer.add(new_data_arr)
+    buffer.add([16, 18, 13, 15])
 
-    new_data_arr = [17, 19, 15, 16]
-    buffer.add(new_data_arr)
+    buffer.add([17, 19, 15, 16])
 
-    new_data_arr = [18, 20, 15, 17]
-    buffer.add(new_data_arr)
+    buffer.add([18, 20, 15, 17])
 
     print(buffer)
     print(buffer.get_data())
